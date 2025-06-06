@@ -1,0 +1,58 @@
+import requests
+import speech_recognition as sr
+import pyttsx3
+
+def search_scrapingbee(query):
+    response = requests.get(
+        url='https://app.scrapingbee.com/api/v1/store/google',
+        params={
+            'api_key': 'ZILULCETHXVV5JEUZZOTQSKRLYSSCX5XYFIDK0POAT5GDN1N4TXLPQ0KT39J74FNFMJIPSG4AZ3VHYGL',
+            'search': query,
+            'language': 'en',
+        },
+    )
+    response.raise_for_status()
+    return response.json()
+
+def extract_first_result(search_results):
+    if 'organic_results' in search_results and len(search_results['organic_results']) > 0:
+        return search_results['organic_results'][0]['title']
+    return "Sorry, I couldn't find any relevant information."
+
+def text_to_speech(text):
+    text_speech = pyttsx3.init()
+    voices = text_speech.getProperty('voices')
+    text_speech.setProperty('voice', voices[1].id)
+    text_speech.setProperty('rate', 150)
+    text_speech.say(text)
+    text_speech.runAndWait()
+
+def main():
+    recognizer = sr.Recognizer()
+
+    try:
+        with sr.Microphone() as source:
+            recognizer.adjust_for_ambient_noise(source, duration=2)
+            print("Say something...")
+            audio = recognizer.listen(source, timeout=60)
+
+        query = recognizer.recognize_google(audio, language='en-IN')
+        print("Recognized:", query)
+
+        search_results = search_scrapingbee(query)
+        first_result = extract_first_result(search_results)
+
+        print(f"First search result: {first_result}")
+        text_to_speech(first_result)
+
+    except sr.WaitTimeoutError:
+        print("Timeout: No speech detected within the timeout period.")
+    except sr.UnknownValueError:
+        print("Google Speech Recognition could not understand the audio.")
+    except sr.RequestError as e:
+        print("Could not request results from Google Speech Recognition service; {0}".format(e))
+    except Exception as e:
+        print("Error: {0}".format(e))
+
+if __name__ == "__main__":
+    main()
